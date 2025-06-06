@@ -5,11 +5,12 @@ const cors = require('cors');
 const app = express();
 const VERIFY_TOKEN = 'tajnyklic123';
 
-// Middlewares
-app.use(cors()); // 🟢 dovolí požadavky z jiných domén
+app.use(cors());
 app.use(bodyParser.json());
 
-// Webhook verifikace (GET)
+let roastPending = false; // 🔥 stav, jestli má Unity spustit roast
+
+// Webhook ověření
 app.get('/', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -23,19 +24,24 @@ app.get('/', (req, res) => {
   }
 });
 
-// Webhook přijímá data (POST)
+// Webhook (z HTML) – aktivuje roast
 app.post('/', (req, res) => {
   const { source, trigger } = req.body;
 
   if (source === 'frontend' && trigger === 'roast-me') {
-    console.log('🔥 Požadavek na roast z webu!');
-    return res.status(200).send('Roast accepted');
+    roastPending = true;
+    console.log('🔥 Požadavek z webu => roastPending = true');
+    return res.status(200).send('OK');
   }
 
-  console.log('📩 Webhook payload:', JSON.stringify(req.body, null, 2));
   res.sendStatus(200);
 });
 
-// Spuštění serveru
+// Unity se ptá: „mám spustit roast?“
+app.get('/status', (req, res) => {
+  res.json({ triggerRoast: roastPending });
+  roastPending = false; // reset
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server běží na portu ${PORT}`));
