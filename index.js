@@ -10,7 +10,7 @@ app.use(bodyParser.json());
 
 let roastPending = false; // 🔥 stav, jestli má Unity spustit roast
 
-// Webhook ověření
+// Webhook ověření (např. pro Meta)
 app.get('/', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -24,10 +24,31 @@ app.get('/', (req, res) => {
   }
 });
 
-// Webhook (z HTML) – aktivuje roast
+// Webhook – reaguje na Instagram zprávy i HTML požadavek
 app.post('/', (req, res) => {
-  const { source, trigger } = req.body;
+  const body = req.body;
 
+  // 💬 ZPRÁVA z Instagramu (přes Graph API webhook)
+  if (body.object === 'instagram') {
+    try {
+      const messagingEvents = body.entry?.[0]?.messaging;
+      if (messagingEvents) {
+        messagingEvents.forEach(event => {
+          const msg = event.message?.text?.toLowerCase();
+          if (msg && msg.includes('roast me')) {
+            roastPending = true;
+            console.log('🔥 Zpráva z IG: "roast me" => roastPending = true');
+          }
+        });
+      }
+    } catch (err) {
+      console.error('❌ Chyba při zpracování IG zprávy:', err);
+    }
+    return res.sendStatus(200);
+  }
+
+  // 🌐 Požadavek z webu (např. HTML tlačítko)
+  const { source, trigger } = body;
   if (source === 'frontend' && trigger === 'roast-me') {
     roastPending = true;
     console.log('🔥 Požadavek z webu => roastPending = true');
