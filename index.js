@@ -10,7 +10,7 @@ app.use(bodyParser.json());
 
 let roastPending = false; // 🔥 stav, jestli má Unity spustit roast
 
-// Webhook ověření (např. pro Meta)
+// ✅ Webhook ověření (Meta callback ověření)
 app.get('/', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -20,26 +20,29 @@ app.get('/', (req, res) => {
     console.log('✔️ Webhook ověřen');
     res.status(200).send(challenge);
   } else {
+    console.log('❌ Ověření selhalo');
     res.sendStatus(403);
   }
 });
 
-// Webhook – reaguje na Instagram zprávy i HTML požadavek
+// ✅ Webhook – reaguje na Instagram zprávy i HTML požadavek
 app.post('/', (req, res) => {
   const body = req.body;
 
   // 💬 ZPRÁVA z Instagramu (přes Graph API webhook)
   if (body.object === 'instagram') {
     try {
-      const messagingEvents = body.entry?.[0]?.messaging;
-      if (messagingEvents) {
-        messagingEvents.forEach(event => {
-          const msg = event.message?.text?.toLowerCase();
+      const changes = body.entry?.[0]?.changes;
+      if (changes && changes.length > 0) {
+        changes.forEach(change => {
+          const msg = change.value?.message?.text?.toLowerCase();
           if (msg && msg.includes('roast me')) {
             roastPending = true;
             console.log('🔥 Zpráva z IG: "roast me" => roastPending = true');
           }
         });
+      } else {
+        console.log('⚠️ IG webhook bez změn');
       }
     } catch (err) {
       console.error('❌ Chyba při zpracování IG zprávy:', err);
@@ -58,11 +61,12 @@ app.post('/', (req, res) => {
   res.sendStatus(200);
 });
 
-// Unity se ptá: „mám spustit roast?“
+// ✅ Endpoint pro Unity – zjistí, jestli má spustit roast
 app.get('/status', (req, res) => {
   res.json({ triggerRoast: roastPending });
-  roastPending = false; // reset
+  roastPending = false; // resetne po přečtení
 });
 
+// 🔥 Spuštění serveru
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server běží na portu ${PORT}`));
