@@ -27,6 +27,8 @@ app.get('/', (req, res) => {
 
 // ✅ Webhook – reaguje na Instagram zprávy i HTML požadavek
 app.post('/', (req, res) => {
+  console.log('📥 IG webhook přišel:', JSON.stringify(req.body, null, 2));
+
   const body = req.body;
 
   // 💬 ZPRÁVA z Instagramu (přes Graph API webhook)
