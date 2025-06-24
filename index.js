@@ -8,7 +8,11 @@ const VERIFY_TOKEN = 'tajnyklic123';
 app.use(cors());
 app.use(bodyParser.json());
 
-let roastPending = false; // 🔥 Unity čeká na start
+let roastPending = {
+  triggerRoast: false,
+  skipInstagram: false
+};
+
 
 // ✅ Webhook ověření z Meta při registraci URL
 app.get('/', (req, res) => {
@@ -59,10 +63,15 @@ app.post('/', (req, res) => {
   // 🖱️ HTML trigger z webu
   const { source, trigger } = body;
   if (source === 'frontend' && trigger === 'roast-me') {
-    roastPending = true;
-    console.log('🔥 HTML trigger z webu => roastPending = true');
+    roastPending.triggerRoast = true;
+    roastPending.skipInstagram = body.skipInstagram === true;
+
+    console.log('🔥 HTML trigger z webu => triggerRoast = true');
+    console.log('🛑 skipInstagram =', roastPending.skipInstagram);
+
     return res.status(200).send('OK');
   }
+
 
   // ❌ Neznámý payload
   console.log('❓ Neznámý payload, žádná akce');
@@ -72,9 +81,14 @@ app.post('/', (req, res) => {
 // ✅ Unity dotaz: má se spustit roast?
 app.get('/status', (req, res) => {
   console.log('📡 Dotaz na /status, odpověď:', roastPending);
-  res.json({ triggerRoast: roastPending });
-  roastPending = false;
+
+  res.json(roastPending);
+
+  // Reset po odeslání
+  roastPending.triggerRoast = false;
+  roastPending.skipInstagram = false;
 });
+
 
 // ✅ Server start
 const PORT = process.env.PORT || 3000;
